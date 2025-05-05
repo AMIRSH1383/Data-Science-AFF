@@ -10,3 +10,10 @@ DATABASE = "stock_market"
 # Create the SQLAlchemy engine
 CONNECTION_STRING = f"mysql+pymysql://{USERNAME}:{PASSWORD}@{HOST}:{PORT}/{DATABASE}"
 engine = create_engine(CONNECTION_STRING)
+
+
+
+def get_connection():
+    return engine
+
+
