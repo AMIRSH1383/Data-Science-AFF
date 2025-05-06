@@ -32,7 +32,7 @@ CREATE TABLE stock_1m (
 DROP TABLE IF EXISTS stock_1d;
 CREATE TABLE stock_daily (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    aggregated BOOLEAN,
+    adjusted BOOLEAN,
     stock_name VARCHAR(50),
     date_time VARCHAR(50),
     volume FLOAT,

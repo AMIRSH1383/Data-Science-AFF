@@ -4,8 +4,8 @@ import os
 import numpy as np
 
 # MySQL credentials
-username = 'root'
-password = 'Farjad83'
+username = 'Amirarsalan'
+# password = 'your_password'
 host = 'localhost'
 port = 3306
 database = 'stock_market' 
@@ -16,7 +16,7 @@ BASE_DIR_NEWS = os.path.join(BASE_DIR, "financial_news")
 BASE_DIR_1D_RAW = os.path.join(BASE_DIR, "daily", "raw")
 BASE_DIR_1D_ADJ = os.path.join(BASE_DIR, "daily", "adjusted")
 # Connect to MySQL
-engine = create_engine(f"mysql+pymysql://{username}:{password}@{host}:{port}/{database}?charset=utf8")
+engine = create_engine(f"mysql+pymysql://{username}@{host}:{port}/{database}")
 
 list_of_stocks = ["fars", "foolad", "khodro", "ranfor", "toreil", "zagros"]
 
@@ -34,7 +34,7 @@ for stock_name in list_of_stocks:
         }, inplace=True)
         df_financial_news.rename({"datetime" : "date_time"}, inplace=True)
         df_financial_news["stock_name"] = stock_name
-        print(df_financial_news.head())
+        # print(df_financial_news.head())
         df_financial_news.to_sql("financial_news", con=engine, if_exists="append", index=False)
         print(f"Loaded financial news for {stock_name}")
     else:
@@ -68,7 +68,6 @@ for  stock_name in list_of_stocks:
 
 
 
-
 # Load data daily raw
 for stock_name in list_of_stocks:
     # base_dir = r"G:\University\Term 6\Data science\Project\2\final_datasets"
@@ -77,6 +76,12 @@ for stock_name in list_of_stocks:
         df_daily = pd.read_csv(path_daily)
         if "Unnamed: 0" in df_daily.columns:
             df_daily.drop(columns=["Unnamed: 0"], inplace=True)
+        if "<TICKER>" in df_daily.columns:
+            df_daily.drop(columns=["<TICKER>"], inplace=True)
+        if "<OPENINT>" in df_daily.columns:
+            df_daily.drop(columns=["<OPENINT>"], inplace=True)
+            df_daily.drop(columns=["<OPENINT>.1"], inplace=True)
+
         # Rename the mismatched columns
         df_daily.rename(columns={
             "<DTYYYYMMDD>" : "date_time",
@@ -92,14 +97,11 @@ for stock_name in list_of_stocks:
         df_daily.dropna(inplace=True)
 
         df_daily["stock_name"] = stock_name
-        df_daily["aggregated"] = False
+        df_daily["adjusted"] = False
         df_daily.to_sql("stock_daily", con=engine, if_exists="append", index=False)
         print(f"Loaded data daily for {stock_name}")
     else:
         print(f"File not found: {path_daily}")
-
-
-
 
 
 
@@ -111,6 +113,12 @@ for stock_name in list_of_stocks:
         df_daily = pd.read_csv(path_daily)
         if "Unnamed: 0" in df_daily.columns:
             df_daily.drop(columns=["Unnamed: 0"], inplace=True)
+        if "<TICKER>" in df_daily.columns:
+            df_daily.drop(columns=["<TICKER>"], inplace=True)
+        if "<OPENINT>" in df_daily.columns:
+            df_daily.drop(columns=["<OPENINT>"], inplace=True)
+            df_daily.drop(columns=["<OPENINT>.1"], inplace=True)
+
         # Rename the mismatched columns
         df_daily.rename(columns={
             "<DTYYYYMMDD>" : "date_time",
@@ -126,7 +134,7 @@ for stock_name in list_of_stocks:
         df_daily.dropna(inplace=True)
 
         df_daily["stock_name"] = stock_name
-        df_daily["aggregated"] = True
+        df_daily["adjusted"] = True
         df_daily.to_sql("stock_daily", con=engine, if_exists="append", index=False)
         print(f"Loaded data daily for {stock_name}")
     else:
