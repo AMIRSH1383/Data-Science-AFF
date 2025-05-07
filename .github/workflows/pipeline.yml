@@ -3,11 +3,27 @@ name: Run Pipeline
 on:
   push:
     branches:
-      - main  
+      - main
 
 jobs:
   run-pipeline:
     runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_USER: Amirarsalan
+          MYSQL_PASSWORD: ""
+          MYSQL_ALLOW_EMPTY_PASSWORD: yes
+          MYSQL_DATABASE: stock_market
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
 
     steps:
       - name: Checkout repo
@@ -23,6 +39,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
+      - name: Wait for MySQL to be ready
+        run: |
+          echo "Waiting for MySQL to be ready..."
+          sleep 20
+
       - name: Run pipeline
+        env:
+          DB_USER: Amirarsalan
+          DB_PASS: ""
+          DB_HOST: 127.0.0.1
+          DB_NAME: stock_market
         run: |
           python pipeline.py
