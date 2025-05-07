@@ -29,7 +29,7 @@ CREATE TABLE stock_1m (
 );
 
 -- 3: Stock daily
-DROP TABLE IF EXISTS stock_1d;
+DROP TABLE IF EXISTS stock_daily;
 CREATE TABLE stock_daily (
     id INT AUTO_INCREMENT PRIMARY KEY,
     adjusted BOOLEAN,

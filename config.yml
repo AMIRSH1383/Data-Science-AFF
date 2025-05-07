@@ -1,10 +1,10 @@
 stocks:
   - foolad
-  - ranfor
-  - fars
-  - toreil
-  - khodro
-  - zagros
+  # - ranfor
+  # - fars
+  # - toreil
+  # - khodro
+  # - zagros
 start_date: '2017-01-01'
 adjusted: true
 days_to_news: 5
