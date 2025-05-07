@@ -35,7 +35,7 @@ def apply_adjustments(df_main, df_adj):
     df_main['date'] = df_main['datetime'].dt.date
     df_adj['date'] = df_adj['date'].dt.date
     df_merged = pd.merge(df_main, df_adj, on='date', how='left')
-    for col in ['open_price', 'highest_price', 'lowest_price', 'close_price']:
+    for col in ['open_price', 'highest_price', 'lowest_price', 'close_price', 'avg_price']:
         df_merged[col] = df_merged[col] * df_merged['Ratio']
     
     df_merged['volume'] = df_merged['volume'] / df_merged['Ratio']

@@ -23,10 +23,10 @@ def read_config(path):
 def add_label(stock_price, stock_news, days_to_news ):
     stock_price['target'] = 0 
     stock_price['days_to_news'] = 0  
-    stock_price['datetime'] = pd.to_datetime(stock_price['datetime'])  
+    stock_price['datetime'] = pd.to_datetime(stock_price['date'])  
 
     # Example financial news dataframe
-    stock_news['datetime'] = pd.to_datetime(stock_news['datetime']) 
+    stock_news['datetime'] = pd.to_datetime(stock_news['date_time']) 
     stock_news['time'] = stock_news['datetime'].dt.time
     stock_news['date'] = stock_news['datetime'].dt.date
     stock_news['adjusted_date'] = stock_news.apply(
@@ -46,14 +46,20 @@ def add_label(stock_price, stock_news, days_to_news ):
                 stock_price.loc[stock_price['datetime'].dt.date == target_date, ['target', 'days_to_news']] = [1, found]
             if(found >= days_to_news):
                 break
-    
+    stock_price.drop(columns=['datetime'], inplace=True)
     return  stock_price
 
 
 def generate_output(stocks_list, final_dataset):
+    dfs = []
     for stock in stocks_list:
         final_dataset[stock].to_csv(os.path.join( OUTPUT_DIR,stock + "final_daily.csv"), index=False, encoding="utf-8")
+        df = final_dataset[stock].copy()
+        df['stock_name'] = stock
+        dfs.append(df)
     
+    all_data = pd.concat(dfs, axis=0, ignore_index=True)
+    all_data.to_csv(os.path.join( OUTPUT_DIR,"final_dataset.csv"), index=False, encoding='utf-8')
     #could add a feature in .yml file in future in order to merge all of them and output as one singls csv if needed
 
 def add_trade_value(df):
@@ -86,8 +92,8 @@ def add_ichimoku(df, window1= 9, window2 = 26, window3 = 52):
     
     df['tenkensen'] = ichi.ichimoku_conversion_line()
     df['kijunsen'] = ichi.ichimoku_base_line()
-    df['senko_a'] = ichi.ichimoku_a()
-    df['senko_b'] = ichi.ichimoku_b()
+    df['senko_a'] = ichi.ichimoku_a().shift(window2-1)
+    df['senko_b'] = ichi.ichimoku_b().shift(window2-1)
     return df
 
 def add_macd(df, window_slow = 26, window_fast = 12, window_sign= 9):
@@ -133,8 +139,8 @@ def basic_ohlc_features(group):
 
     return pd.Series({
         'open_price': open_price,
-        'high_price': high_price,
-        'low_price': low_price,
+        'highest_price': high_price,
+        'lowest_price': low_price,
         'close_price': close_price,
         'avg_price': avg_price,
         'volume': volume,
@@ -241,6 +247,10 @@ def count_macd_signal_cross(group):
     cross = (macd_sign.diff().abs() > 0).sum()
     return pd.Series({'macd_cross_signal_count': cross})
 
+def intraday_volatility(group):
+    returns = group['price_change'] - 1
+    vol = returns.std()
+    return pd.Series({'intraday_volatility': vol})
 
 def aggregate_daily(enhanced_1min_df):
     df = enhanced_1min_df.copy()
@@ -255,7 +265,8 @@ def aggregate_daily(enhanced_1min_df):
         count_rsi_thresholds,
         count_bb_breaks,
         count_ichimoku_crosses,
-        count_macd_signal_cross
+        count_macd_signal_cross,
+        intraday_volatility
     ]
 
     records = []
@@ -268,6 +279,58 @@ def aggregate_daily(enhanced_1min_df):
     return pd.DataFrame(records)
 
 
+
+
+
+
+
+def add_daily_returns(df):
+    df = df.copy()
+    df['prev_close'] = df['close_price'].shift(1)
+    df['open_return'] = df['open_price'] / df['prev_close']
+    df['high_return'] = df['highest_price'] / df['prev_close']
+    df['low_return'] = df['lowest_price'] / df['prev_close']
+    df['close_return'] = df['close_price'] / df['prev_close']
+    df['avg_price_return'] = df['avg_price'] / df['prev_close']
+    df.drop(columns=['prev_close'], inplace=True)
+    return df
+
+def add_rolling_averages(df, window = 22):
+    df = df.copy()
+    df[f'avg_{window}_day_volume'] = df['volume'].rolling(window).mean()
+    df[f'avg_{window}_day_trade_value'] = df['trade_value'].rolling(window).mean()
+    return df
+
+
+def add_high_low_div_cloud(df):
+    df = df.copy()
+    cloud_range = (df['senko_b'] - df['senko_a']).abs()
+    denom = cloud_range.replace(0, 1)
+    df['high_minus_low_divided_by_cloud_range'] = (df['highest_price'] - df['lowest_price']) / denom
+    return df
+
+def add_volume_tradevalue_ratios(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df['vol_div_avg_vol'] = df['volume'] / df.get('avg_22_day_volume')
+    df['trade_value_div_avg_trade_value'] = df['trade_value'] / df.get('avg_22_day_trade_value')
+    df['max_10_mins_trade_value_div_avg_trade_value'] = df.get('max_10_mins_trade_value') / df['avg_22_day_trade_value']
+    return df
+
+
+def build_sophisticated_daily(df):
+    df = df.copy()
+    funcs = [
+        add_daily_returns,
+        add_rsi,
+        add_rolling_averages,
+        add_ichimoku,
+        add_high_low_div_cloud,
+        add_volume_tradevalue_ratios
+    ]
+    for func in funcs:
+        df = func(df)
+    return df
+
 def engineer_features(adjusted_1min_data, final_news_dataset):
     final_dataset ={}
     stocks_list, desired_features_list,  days_to_news = read_config(CONFIG_PATH)
@@ -276,10 +339,9 @@ def engineer_features(adjusted_1min_data, final_news_dataset):
         new_df = adjusted_1min_data[stock]
         enhanced_1min_dataframe = prepare_enhanced_1min_dataframe(new_df)
         base_daily_dataframe = aggregate_daily(enhanced_1min_dataframe)
-        # new_df = add_label(new_df, final_news_dataset[stock], days_to_news )
-        # enhanced_1min_dataframe.to_csv("./output/test.csv")
-        final_dataset[stock] = base_daily_dataframe
-        # final_dataset[stock] = enhanced_1min_dataframe
+        all_features_daily_dataframe = build_sophisticated_daily(base_daily_dataframe)
+        all_features_daily_dataframe_plus_lable = add_label(all_features_daily_dataframe, final_news_dataset[stock], days_to_news )
+        final_dataset[stock] = all_features_daily_dataframe_plus_lable
 
 
     generate_output(stocks_list, final_dataset)

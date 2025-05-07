@@ -1,10 +1,10 @@
 stocks:
   - fars
-  # - foolad
-  # - ranfor
-  # - toreil
-  # - khodro
-  # - zagros
+  - foolad
+  - ranfor
+  - toreil
+  - khodro
+  - zagros
 features:
   - open_return
   - high_return
@@ -12,6 +12,6 @@ features:
   - close_return
   - avg_price_return
   - RSI
-start_date: '2017-01-01'
+start_date: '2018-01-01'
 adjusted: true
-days_to_news: 5
+days_to_news: 3
