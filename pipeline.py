@@ -27,8 +27,9 @@ def main():
     final_news_dataset, stocks_raw_dataframe, daily_stocks_dataframe = load_data(engine)
     print("Data loaded from database.")
     adjusted_1min_data = preprocess(stocks_raw_dataframe, daily_stocks_dataframe)
+    print(adjusted_1min_data)        
     print("Data preprocessing complete.")
-    # engineer_features(adjusted_1min_data, final_news_dataset)
+    engineer_features(adjusted_1min_data, final_news_dataset)
     # print("Feature engineering complete.")
     # print("Pipeline complete.")
 

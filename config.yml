@@ -5,6 +5,13 @@ stocks:
   # - toreil
   # - khodro
   # - zagros
+features:
+  - open_return
+  - high_return
+  - low_return
+  - close_return
+  - avg_price_return
+  - RSI
 start_date: '2017-01-01'
 adjusted: true
 days_to_news: 5
