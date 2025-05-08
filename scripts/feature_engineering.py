@@ -82,9 +82,7 @@ def add_label(stock_price, stock_news, days_to_news ):
     return  stock_price_labled
 
 def generate_output(stocks_list, final_dataset):
-    # Ensure the output directory exists
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    
+
     dfs = []
     for stock in stocks_list:
         final_dataset[stock].to_csv(os.path.join(OUTPUT_DIR, stock + "final_daily.csv"), index=False, encoding="utf-8")
@@ -389,6 +387,9 @@ def select_features(all_features_daily_dataframe, desired_features_list, preferr
 
 
 def engineer_features(adjusted_1min_data, final_news_dataset):
+    # Ensure the output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     final_dataset ={}
     stocks_list, desired_features_list,  days_to_news, preferred_parameters = read_config(CONFIG_PATH)
     desired_features_list.append('date')
