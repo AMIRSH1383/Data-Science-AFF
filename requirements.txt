@@ -4,3 +4,4 @@ sqlalchemy
 pymysql
 PyYAML
 ta
+cryptography
