@@ -3,5 +3,5 @@ numpy
 sqlalchemy
 pymysql
 PyYAML
-ta
 cryptography
+ta
