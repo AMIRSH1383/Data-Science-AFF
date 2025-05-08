@@ -42,6 +42,10 @@ jobs:
           echo "Waiting for MySQL to be ready..."
           sleep 20
 
+      - name: Import compressed SQL dump
+        run: |
+          gunzip -c database/stock_market.sql.gz | mysql -h 127.0.0.1 -u root -p"Amirarsalan83" stock_market
+
       - name: Run pipeline
         env:
           DB_USER: root
