@@ -4,9 +4,8 @@ import os
 import numpy as np
 
 # MySQL credentials
-# USERNAME = 'Amirarsalan'
 USERNAME = 'root'
-PASSWORD = 'Farjad83'
+PASSWORD = 'Amirarsalan83'
 host = 'localhost'
 port = 3306
 database = 'stock_market' 
@@ -17,7 +16,6 @@ BASE_DIR_NEWS = os.path.join(BASE_DIR, "financial_news")
 BASE_DIR_1D_RAW = os.path.join(BASE_DIR, "daily", "raw")
 BASE_DIR_1D_ADJ = os.path.join(BASE_DIR, "daily", "adjusted")
 # Connect to MySQL
-# engine = create_engine(f"mysql+pymysql://{USERNAME}@{host}:{port}/{database}")
 engine = create_engine(f"mysql+pymysql://{USERNAME}:{PASSWORD}@{host}:{port}/{database}")
 
 list_of_stocks = ["fars", "foolad", "khodro", "ranfor", "toreil", "zagros"]
