@@ -15,7 +15,6 @@ jobs:
         env:
           MYSQL_USER: root
           MYSQL_PASSWORD: "Amirarsalan83"
-          MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: stock_market
         ports:
           - 3306:3306
