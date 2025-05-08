@@ -11,6 +11,34 @@ CONFIG_PATH = "config.yml"
 TRADING_END = "12:30:00"
 OUTPUT_DIR = "output"
 
+DEFAULT_RSI_UPPER_TRESH = 80
+DEFAULT_RSI_LOWER_TRESH = 20
+DEFAULT_RSI_PERIOD = 14
+DEFAULT_INTERVAL_DURATION = 10
+DEFAULT_VOL_VAL_AVG_PERIOD = 20
+DEFAULT_BB_PERIOD = 20
+DEFAULT_SIGNIFICANT_MIN_TRESH = 0.01
+
+def get_preferred_params(config):
+    preferred_parameters ={}
+    vol_val_average_period = config.get('vol_val_average_period', DEFAULT_VOL_VAL_AVG_PERIOD)
+    rsi_period = config.get('rsi_period', DEFAULT_RSI_PERIOD)
+    interval_duration = config.get('interval_duration', [DEFAULT_INTERVAL_DURATION])
+    rsi_higher_tresh = config.get('rsi_higher_tresh', DEFAULT_RSI_UPPER_TRESH)
+    rsi_lower_tresh = config.get('rsi_lower_tresh', DEFAULT_RSI_LOWER_TRESH)
+    bb_n = config.get('bb_n', DEFAULT_BB_PERIOD)
+    significant_min_tresh = config.get('significant_min_tresh', DEFAULT_SIGNIFICANT_MIN_TRESH)
+
+    preferred_parameters['vol_val_average_period'] = vol_val_average_period
+    preferred_parameters['rsi_period'] = rsi_period
+    preferred_parameters['interval_duration'] = interval_duration
+    preferred_parameters['rsi_higher_tresh'] = rsi_higher_tresh
+    preferred_parameters['rsi_lower_tresh'] = rsi_lower_tresh
+    preferred_parameters['bb_n'] = bb_n
+    preferred_parameters['significant_min_tresh'] = significant_min_tresh
+
+    return preferred_parameters
+
 def read_config(path):
     with open(path, 'r') as file:
         config = yaml.safe_load(file)
@@ -18,12 +46,16 @@ def read_config(path):
     stocks = config.get('stocks', [])
     days_to_news = config.get('days_to_news', 5)
     desired_features = config.get('features', [])
-    return stocks, desired_features, days_to_news
+
+    preferred_parameters = get_preferred_params(config)
+
+    return stocks, desired_features, days_to_news, preferred_parameters
 
 def add_label(stock_price, stock_news, days_to_news ):
-    stock_price['target'] = 0 
-    stock_price['days_to_news'] = 0  
-    stock_price['datetime'] = pd.to_datetime(stock_price['date'])  
+    stock_price_labled = stock_price.copy()
+    stock_price_labled.loc[:, 'target'] = 0
+    stock_price_labled.loc[:, 'days_to_news'] = 0
+    stock_price_labled.loc[:, 'datetime'] = pd.to_datetime(stock_price_labled['date']) 
 
     # Example financial news dataframe
     stock_news['datetime'] = pd.to_datetime(stock_news['date_time']) 
@@ -41,13 +73,13 @@ def add_label(stock_price, stock_news, days_to_news ):
         found = 0
         for i in range(1, 15):
             target_date = news_date - pd.Timedelta(days=i)
-            if(len( stock_price.loc[stock_price['datetime'].dt.date == target_date, ['target', 'days_to_news']]) > 0):
+            if(len( stock_price_labled.loc[stock_price_labled['datetime'].dt.date == target_date, ['target', 'days_to_news']]) > 0):
                 found +=1
-                stock_price.loc[stock_price['datetime'].dt.date == target_date, ['target', 'days_to_news']] = [1, found]
+                stock_price_labled.loc[stock_price_labled['datetime'].dt.date == target_date, ['target', 'days_to_news']] = [1, found]
             if(found >= days_to_news):
                 break
-    stock_price.drop(columns=['datetime'], inplace=True)
-    return  stock_price
+    stock_price_labled.drop(columns=['datetime'], inplace=True)
+    return  stock_price_labled
 
 
 def generate_output(stocks_list, final_dataset):
@@ -107,13 +139,14 @@ def add_macd(df, window_slow = 26, window_fast = 12, window_sign= 9):
     return df
 
 
-def prepare_enhanced_1min_dataframe(base_1min_data):
+def prepare_enhanced_1min_dataframe(base_1min_data, preferred_parameters):
     df = base_1min_data.sort_values('date_time')
+    
     funcs = [
         add_trade_value,
         add_price_change,
-        add_rsi,
-        add_bollinger_bands,
+        lambda g: add_rsi(g, window=preferred_parameters['rsi_period']),
+        lambda g: add_bollinger_bands(g, window=preferred_parameters['bb_n']),
         add_ichimoku,
         add_macd
     ]
@@ -176,7 +209,7 @@ def rolling_extrema(group, extreme_period = 10):
     return pd.Series({
         f'max_{extreme_period}_min_positive_price_change': max_n_pos_pc,
         f'max_{extreme_period}_min_negative_price_change': min_n_neg_pc,
-        f'max_{extreme_period}_mins_trade_value': max_n_tv
+        f'max_{extreme_period}_min_trade_value': max_n_tv
     })
 
 
@@ -194,8 +227,8 @@ def count_rsi_thresholds(group, upper = 80, lower = 20):
     above = (group['RSI'] > upper).sum()
     below = (group['RSI'] < lower).sum()
     return pd.Series({
-        'RSI_above_{}'.format(upper): above,
-        'RSI_under_{}'.format(lower): below
+        'RSI_above_treshold': above,
+        'RSI_under_treshold': below
     })
 
 
@@ -252,22 +285,26 @@ def intraday_volatility(group):
     vol = returns.std()
     return pd.Series({'intraday_volatility': vol})
 
-def aggregate_daily(enhanced_1min_df):
+def aggregate_daily(enhanced_1min_df, preferred_parameters):
     df = enhanced_1min_df.copy()
     df['date_time'] = pd.to_datetime(df['date_time'])
     df['date'] = df['date_time'].dt.date
 
+
     aggregators = [
         basic_ohlc_features,
         wick_and_body_ratios_features,
-        lambda g: rolling_extrema(g, extreme_period=10),
-        count_zero_and_significant,
-        count_rsi_thresholds,
         count_bb_breaks,
+        intraday_volatility,
         count_ichimoku_crosses,
         count_macd_signal_cross,
-        intraday_volatility
+        count_zero_and_significant,
+        lambda g: count_zero_and_significant(g, sign_thresh= preferred_parameters['significant_min_tresh']),
+        lambda g: count_rsi_thresholds(g, upper=preferred_parameters['rsi_higher_tresh'], lower = preferred_parameters['rsi_lower_tresh'])
+        
     ]
+    for duration in preferred_parameters['interval_duration']:
+        aggregators.append(lambda g, d=duration: rolling_extrema(g, extreme_period=d))
 
     records = []
     for date, group in df.groupby('date'):
@@ -276,6 +313,7 @@ def aggregate_daily(enhanced_1min_df):
             features.update(func(group).to_dict())
         features['date'] = date
         records.append(features)
+    pd.DataFrame(records).to_csv("output/test_extreme.csv")
     return pd.DataFrame(records)
 
 
@@ -309,38 +347,55 @@ def add_high_low_div_cloud(df):
     df['high_minus_low_divided_by_cloud_range'] = (df['highest_price'] - df['lowest_price']) / denom
     return df
 
-def add_volume_tradevalue_ratios(df: pd.DataFrame) -> pd.DataFrame:
+def add_volume_tradevalue_ratios(df, window, intervals):
     df = df.copy()
-    df['vol_div_avg_vol'] = df['volume'] / df.get('avg_22_day_volume')
-    df['trade_value_div_avg_trade_value'] = df['trade_value'] / df.get('avg_22_day_trade_value')
-    df['max_10_mins_trade_value_div_avg_trade_value'] = df.get('max_10_mins_trade_value') / df['avg_22_day_trade_value']
+    df['vol_div_avg_vol'] = df['volume'] / df.get(f'avg_{window}_day_volume')
+    df['trade_value_div_avg_trade_value'] = df['trade_value'] / df.get(f'avg_{window}_day_trade_value')
+    for interval in intervals:
+        df[f'max_{interval}_min_trade_value_div_avg_trade_value'] = df.get(f'max_{interval}_min_trade_value') / df[f'avg_{window}_day_trade_value']
+    
     return df
 
 
-def build_sophisticated_daily(df):
+def build_sophisticated_daily(df, preferred_parameters):
     df = df.copy()
+    
     funcs = [
         add_daily_returns,
-        add_rsi,
-        add_rolling_averages,
         add_ichimoku,
         add_high_low_div_cloud,
-        add_volume_tradevalue_ratios
+        lambda g: add_rsi(g, window=preferred_parameters['rsi_period']),
+        lambda g: add_rolling_averages(g, window=preferred_parameters['vol_val_average_period']),
+        lambda g: add_volume_tradevalue_ratios(g, window=preferred_parameters['vol_val_average_period'], intervals = preferred_parameters['interval_duration'])
     ]
     for func in funcs:
         df = func(df)
     return df
 
+def select_features(all_features_daily_dataframe, desired_features_list, preferred_parameters):
+    for feature in ['max_negative_price_change', 'max_positive_price_change', 'max_trade_value_div_avg_trade_value']:
+        if(feature in desired_features_list):
+            desired_features_list.remove(feature)
+            for window in preferred_parameters['interval_duration']:
+                new_feature =  feature[0:4] + f"{window}_min" + feature[3:]
+                desired_features_list.append(new_feature)
+    
+
+    
+    return all_features_daily_dataframe[desired_features_list]
+
+
 def engineer_features(adjusted_1min_data, final_news_dataset):
     final_dataset ={}
-    stocks_list, desired_features_list,  days_to_news = read_config(CONFIG_PATH)
-
+    stocks_list, desired_features_list,  days_to_news, preferred_parameters = read_config(CONFIG_PATH)
+    desired_features_list.append('date')
     for stock in stocks_list:
         new_df = adjusted_1min_data[stock]
-        enhanced_1min_dataframe = prepare_enhanced_1min_dataframe(new_df)
-        base_daily_dataframe = aggregate_daily(enhanced_1min_dataframe)
-        all_features_daily_dataframe = build_sophisticated_daily(base_daily_dataframe)
-        all_features_daily_dataframe_plus_lable = add_label(all_features_daily_dataframe, final_news_dataset[stock], days_to_news )
+        enhanced_1min_dataframe = prepare_enhanced_1min_dataframe(new_df, preferred_parameters)
+        base_daily_dataframe = aggregate_daily(enhanced_1min_dataframe, preferred_parameters)
+        all_features_daily_dataframe = build_sophisticated_daily(base_daily_dataframe, preferred_parameters)
+        selected_features_dataframe = select_features(all_features_daily_dataframe, desired_features_list, preferred_parameters)
+        all_features_daily_dataframe_plus_lable = add_label(selected_features_dataframe, final_news_dataset[stock], days_to_news )
         final_dataset[stock] = all_features_daily_dataframe_plus_lable
 
 

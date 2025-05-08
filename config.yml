@@ -5,6 +5,7 @@ stocks:
   - toreil
   - khodro
   - zagros
+
 features:
   - open_return
   - high_return
@@ -12,6 +13,40 @@ features:
   - close_return
   - avg_price_return
   - RSI
+  - vol_div_avg_vol
+  - trade_value_div_avg_trade_value
+  - body_divided_by_high_minus_low
+  - high_minus_low_divided_by_cloud_range
+  - upper_wick_to_high_minus_low
+  - lower_wick_to_high_minus_low
+  - avg_price_position_with_respect_the_high_and_low
+  - max_negative_price_change
+  - max_positive_price_change
+  - max_trade_value_div_avg_trade_value
+  - zero_volume_minutes_count
+  - significant_minutes_count
+  - RSI_above_treshold
+  - RSI_under_treshold
+  - price_higher_than_BB_higher_count
+  - price_lower_than_BB_lower_count
+  - kijun_tenken_cross_count
+  - price_in_cloud_minutes_count
+  - price_between_kijun_tenkensen_count
+  - cloud_cross_count
+  - macd_cross_signal_count
+  - intraday_volatility
+
+
+
+
+
 start_date: '2018-01-01'
 adjusted: true
-days_to_news: 3
+days_to_news: 5
+vol_val_average_period: 22
+rsi_period: 14
+interval_duration: [20, 10]
+rsi_higher_tresh: 80
+rsi_lower_tresh: 20
+bb_n: 20
+significant_min_tresh: 0.01
