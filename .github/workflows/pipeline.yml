@@ -13,8 +13,8 @@ jobs:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_USER: Amirarsalan
-          MYSQL_PASSWORD: ""
+          MYSQL_USER: root
+          MYSQL_PASSWORD: "Amirarsalan83"
           MYSQL_ALLOW_EMPTY_PASSWORD: yes
           MYSQL_DATABASE: stock_market
         ports:
@@ -46,8 +46,8 @@ jobs:
 
       - name: Run pipeline
         env:
-          DB_USER: Amirarsalan
-          DB_PASS: ""
+          DB_USER: root
+          DB_PASS: "Amirarsalan83"
           DB_HOST: 127.0.0.1
           DB_NAME: stock_market
         run: |
