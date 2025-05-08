@@ -55,7 +55,7 @@ jobs:
         run: |
           python pipeline.py
                   
-      - name: Commit and push output files
+      - name: Push output to repo
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
