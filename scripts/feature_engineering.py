@@ -81,18 +81,21 @@ def add_label(stock_price, stock_news, days_to_news ):
     stock_price_labled.drop(columns=['datetime'], inplace=True)
     return  stock_price_labled
 
-
 def generate_output(stocks_list, final_dataset):
+    # Ensure the output directory exists
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     dfs = []
     for stock in stocks_list:
-        final_dataset[stock].to_csv(os.path.join( OUTPUT_DIR,stock + "final_daily.csv"), index=False, encoding="utf-8")
+        final_dataset[stock].to_csv(os.path.join(OUTPUT_DIR, stock + "final_daily.csv"), index=False, encoding="utf-8")
         df = final_dataset[stock].copy()
         df['stock_name'] = stock
         dfs.append(df)
     
     all_data = pd.concat(dfs, axis=0, ignore_index=True)
-    all_data.to_csv(os.path.join( OUTPUT_DIR,"final_dataset.csv"), index=False, encoding='utf-8')
+    all_data.to_csv(os.path.join(OUTPUT_DIR, "final_dataset.csv"), index=False, encoding='utf-8')
     #could add a feature in .yml file in future in order to merge all of them and output as one singls csv if needed
+
 
 def add_trade_value(df):
     df['trade_value'] = df['volume'] * df['avg_price']
