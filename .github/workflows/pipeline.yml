@@ -56,7 +56,7 @@ jobs:
           python pipeline.py
           
       - name: Upload output folder
-        uses: actions/upload-artifact@v3@6dbf3a5f789f43a926d6f39546e6a032c9dd8cba
+        uses: actions/upload-artifact@v3.1.3
         with:
           name: output-files
           path: output/
