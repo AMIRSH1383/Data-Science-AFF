@@ -54,3 +54,10 @@ jobs:
           DB_NAME: stock_market
         run: |
           python pipeline.py
+          
+      - name: Upload output folder
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-outputs
+          path: output/
